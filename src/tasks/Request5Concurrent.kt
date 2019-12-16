@@ -8,6 +8,7 @@ import contributors.logUsers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 
 suspend fun loadContributorsConcurrent(service: GitHubService, req: RequestData): List<User> = coroutineScope {
     service
@@ -25,5 +26,4 @@ suspend fun loadContributorsConcurrent(service: GitHubService, req: RequestData)
         .awaitAll()
         .flatten()
         .aggregate()
-
 }
