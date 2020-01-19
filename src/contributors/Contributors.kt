@@ -16,6 +16,8 @@ import contributors.Variant.SUSPEND
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tasks.loadContributorsBackground
@@ -146,9 +148,11 @@ interface Contributors : CoroutineScope {
             }
             FLOWS2 -> {
                 launch {
-                    loadContributorsFlow2(service, req) { users, completed ->
-                        updateResults(users, startTime, completed)
-                    }
+                    loadContributorsFlow2(service, req)
+                        .onEach { (users, completed) ->
+                            updateResults(users, startTime, completed)
+                        }
+                        .launchIn(this)
                 }.setUpCancellation()
             }
         }

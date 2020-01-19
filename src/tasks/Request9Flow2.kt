@@ -8,38 +8,35 @@ import contributors.logUsers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
-suspend fun loadContributorsFlow2(
+fun loadContributorsFlow2(
     service: GitHubService,
-    req: RequestData,
-    updateResults: suspend (List<User>, completed: Boolean) -> Unit
-) = coroutineScope {
-    flow {
-        val users = service
+    req: RequestData
+): Flow<Pair<List<User>, Boolean>> = flow {
+    coroutineScope {
+        var allUsers = listOf<User>()
+        var lastIndex: Int
+
+        service
             .getOrgRepos(req.org)
             .also { logRepos(req, it) }
             .bodyList()
+            .also { lastIndex = it.lastIndex }
             .map { repo ->
-                async(Dispatchers.IO) {
+                async {
                     service
                         .getRepoContributors(req.org, repo.name)
                         .also { logUsers(repo, it) }
                         .bodyList()
                 }
+            }.forEachIndexed { index, deferredUser ->
+                val newUsers = deferredUser.await()
+                allUsers = (allUsers + newUsers).aggregate()
+                emit(allUsers to (index == lastIndex))
             }
-
-        var allUsers = listOf<User>()
-        for ((index, user) in users.withIndex()) {
-            val newUsers = user.await()
-            allUsers = (allUsers + newUsers).aggregate()
-            emit(allUsers to (index == users.lastIndex))
-        }
     }
-    .flowOn(Dispatchers.IO)
-    .collect { (users, isCompleted) ->
-        updateResults(users, isCompleted)
-    }
-}
+}.flowOn(Dispatchers.IO)
