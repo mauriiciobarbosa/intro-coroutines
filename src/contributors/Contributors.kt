@@ -8,13 +8,14 @@ import contributors.Variant.BLOCKING
 import contributors.Variant.CALLBACKS
 import contributors.Variant.CHANNELS
 import contributors.Variant.CONCURRENT
+import contributors.Variant.FLOWS
+import contributors.Variant.FLOWS2
 import contributors.Variant.NOT_CANCELLABLE
 import contributors.Variant.PROGRESS
 import contributors.Variant.SUSPEND
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tasks.loadContributorsBackground
@@ -22,6 +23,8 @@ import tasks.loadContributorsBlocking
 import tasks.loadContributorsCallbacks
 import tasks.loadContributorsChannels
 import tasks.loadContributorsConcurrent
+import tasks.loadContributorsFlow
+import tasks.loadContributorsFlow2
 import tasks.loadContributorsNotCancellable
 import tasks.loadContributorsProgress
 import tasks.loadContributorsSuspend
@@ -37,7 +40,9 @@ enum class Variant {
     CONCURRENT,       // Request5Concurrent
     NOT_CANCELLABLE,  // Request6NotCancellable
     PROGRESS,         // Request6Progress
-    CHANNELS          // Request7Channels
+    CHANNELS,          // Request7Channels
+    FLOWS,          // Request8Flow
+    FLOWS2          // Request9Flow2
 }
 
 interface Contributors : CoroutineScope {
@@ -127,6 +132,22 @@ interface Contributors : CoroutineScope {
                         withContext(Dispatchers.Main) {
                             updateResults(users, startTime, completed)
                         }
+                    }
+                }.setUpCancellation()
+            }
+            FLOWS -> {
+                launch(Dispatchers.Default) {
+                    loadContributorsFlow(service, req) { users, completed ->
+                        withContext(Dispatchers.Main) {
+                            updateResults(users, startTime, completed)
+                        }
+                    }
+                }.setUpCancellation()
+            }
+            FLOWS2 -> {
+                launch {
+                    loadContributorsFlow2(service, req) { users, completed ->
+                        updateResults(users, startTime, completed)
                     }
                 }.setUpCancellation()
             }
